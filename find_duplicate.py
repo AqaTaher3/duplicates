@@ -1,9 +1,10 @@
 import os
 import shutil
 import hashlib
+import tkinter as tk
+from tkinter import messagebox
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm  # For progress bar
-
 
 def calculate_file_hash(file_path):
     """Calculate the SHA-256 hash of a file."""
@@ -22,10 +23,15 @@ def ensure_directory_exists(directory):
     os.makedirs(directory, exist_ok=True)
 
 
-def find_and_remove_duplicates(source_folder, destination_folder):
-    """Find and move duplicate files to the destination folder."""
-    ensure_directory_exists(destination_folder)
-    seen_files = set()
+def move_file(selected_path, output_folder, file_name):
+    """Move the selected file to the destination folder."""
+    shutil.move(selected_path, os.path.join(output_folder, file_name))
+
+
+def find_and_prompt_duplicates(source_folder, output_folder):
+    """Find and prompt user to move duplicate files to the destination folder."""
+    ensure_directory_exists(output_folder)
+    seen_files = {}
     transferred_files = set()
 
     # Collect all files
@@ -33,20 +39,68 @@ def find_and_remove_duplicates(source_folder, destination_folder):
     total_files = len(files)
 
     def process_file(file_path):
-        """Process a single file: check for duplicates and move if needed."""
+        """Process a single file: check for duplicates and prompt user."""
         file_hash = calculate_file_hash(file_path)
         if file_hash in seen_files:
             base_name, extension = os.path.splitext(os.path.basename(file_path))
-            duplicate_destination = os.path.join(destination_folder, f"{base_name}_{file_hash[:6]}{extension}")
-            if file_path not in transferred_files:
-                try:
-                    shutil.move(file_path, duplicate_destination)
-                    print(f"File moved: {file_path} -> {duplicate_destination}")
-                    transferred_files.add(file_path)
-                except PermissionError as e:
-                    print(f"Unable to move file {file_path}: {e}")
+            # Get duplicate files
+            original_file = seen_files[file_hash]
+            duplicate_file = file_path
+
+            # Create the Tkinter window to prompt the user
+            root = tk.Tk()
+            root.title("انتخاب فایل برای انتقال")
+
+            # تنظیم پنجره به حالت فول‌اسکرین
+            root.attributes('-fullscreen', True)
+
+            # تنظیم رنگ پس‌زمینه پنجره به ذغالی
+            root.configure(bg='#333333')
+
+            # تغییر فونت و اندازه پنجره
+            font = ("Arial", 24)  # تغییر اندازه فونت به 24
+            tk.Label(root, text=f"فایل تکراری: {os.path.basename(duplicate_file)}", font=font, fg='white', bg='#333333').pack(pady=20)
+
+            # دکمه برای انتخاب مسیر فایل اصلی
+            tk.Button(
+                root,
+                text=f"{original_file}",
+                bg="#D56B7A",  # رنگ پس‌زمینه صورتی
+                font=font,
+                fg="white",  # رنگ متن سفید
+                command=lambda: [move_file(original_file, output_folder, os.path.basename(original_file)), root.destroy()],
+                wraplength=0,  # جلوگیری از تقسیم متن به چند خط
+                anchor="w",  # تنظیم متن به سمت چپ
+                padx=20  # فاصله داخلی از سمت چپ
+            ).pack(pady=10, padx=10, fill='x')
+
+            # دکمه برای انتخاب مسیر فایل تکراری
+            tk.Button(
+                root,
+                text=f"{duplicate_file}",
+                bg="#A8D8A8",  # رنگ پس‌زمینه سبز روشن
+                font=font,
+                fg="white",  # رنگ متن سفید
+                command=lambda: [move_file(duplicate_file, output_folder, os.path.basename(duplicate_file)), root.destroy()],
+                wraplength=0,  # جلوگیری از تقسیم متن به چند خط
+                anchor="w",  # تنظیم متن به سمت چپ
+                padx=20  # فاصله داخلی از سمت چپ
+            ).pack(pady=10, padx=10, fill='x')
+
+            # دکمه برای صرف‌نظر کردن
+            tk.Button(
+                root,
+                text="هیچ‌کدام را منتقل نکن",
+                font=font,
+                fg="white",
+                bg="#666666",  # رنگ پس‌زمینه خاکی برای دکمه
+                command=root.destroy
+            ).pack(pady=20)
+
+            root.mainloop()
+
         else:
-            seen_files.add(file_hash)
+            seen_files[file_hash] = file_path
 
     # Process files with progress bar
     with ThreadPoolExecutor() as executor, tqdm(total=total_files, desc="Processing files") as pbar:
@@ -54,8 +108,11 @@ def find_and_remove_duplicates(source_folder, destination_folder):
             executor.submit(process_file, file_path)
             pbar.update(1)
 
+    # پیام پایان عملیات
+    messagebox.showinfo("اتمام عملیات", "تمام فایل‌های تکراری پردازش شدند.")
+
 
 if __name__ == "__main__":
-    source_folder = r"C:\Users\HP\Music\muzic"
-    destination_folder = r"C:\Users\HP\Music\duplicate"
-    find_and_remove_duplicates(source_folder, destination_folder)
+    folder = r"C:\Users\HP\Music\muzic"
+    output_folder = r"C:\Users\HP\Music\gadimi"  # پوشه مقصد
+    find_and_prompt_duplicates(folder, output_folder)
