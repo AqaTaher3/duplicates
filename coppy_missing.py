@@ -1,25 +1,32 @@
+# coppy_missing.py
 import os
-import shutil
+from compare_move import compare_and_move_files
 
-def copy_missing_files(src_dir, dest_dir):
-    for root, dirs, files in os.walk(src_dir):
-        rel_path = os.path.relpath(root, src_dir)
-        dest_root = os.path.join(dest_dir, rel_path)
+def coppy_missing_files(folder1, folder2, output_folder):
+    """
+    بررسی فایل‌های تکراری در دو فولدر و انتقال یا کپی آنها پس از تأیید کاربر.
+    """
+    # اطمینان از اینکه فولدر مقصد وجود دارد
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
-        if not os.path.exists(dest_root):
-            os.makedirs(dest_root)
+    # دریافت فایل‌های فولدر اول و دوم
+    files1 = os.listdir(folder1)
+    files2 = os.listdir(folder2)
 
-        for file in files:
-            src_file = os.path.join(root, file)
-            dest_file = os.path.join(dest_root, file)
+    # بررسی فایل‌های تکراری
+    for file in files1:
+        if file in files2:
+            path1 = os.path.join(folder1, file)
+            path2 = os.path.join(folder2, file)
 
-            if not os.path.exists(dest_file):
-                shutil.copy2(src_file, dest_file)
-                print(f"File copied: {src_file} -> {dest_file}")
-            else:
-                print(f"File already exists: {file}")
+            # بررسی مسیر نسبی از ریشه فولدرها
+            rel_path1 = os.path.relpath(path1, folder1)
+            rel_path2 = os.path.relpath(path2, folder2)
 
-if __name__ == "__main__":
-    src_folder1 = r"C:\Users\HP\Music\muzic"
-    src_folder2 = r"C:\Users\HP\Music\music"
-    copy_missing_files(src_folder2, src_folder1)
+            # اگر مسیر نسبی یکسان باشد (با توجه به اینکه در همان دایرکتوری هستند)، پردازش نشوند
+            if rel_path1 == rel_path2:
+                continue
+
+            # فراخوانی تابع مقایسه و انتقال فایل
+            compare_and_move_files(path1, path2, output_folder)
