@@ -1,30 +1,36 @@
-# compare_move.py
 import os
-import shutil
-from grafical import show_prompt
+from grafical import show_prompt, show_end_message  # وارد کردن توابع گرافیکی از فایل گرافیکال
 
-def compare_and_move_files(file1, file2, output_folder):
+
+def compare_and_move_files(folder1, folder2, output_folder):
     """
-    مقایسه دو فایل و انتقال یکی از آنها به پوشه مقصد
+    مقایسه فایل‌ها در دو فولدر مختلف و انتقال یا کپی آنها به پوشه مقصد.
     """
-    def calculate_file_hash(file_path):
-        """محاسبه هش SHA-256 یک فایل"""
-        import hashlib
-        BLOCK_SIZE = 65536  # 64 KB
-        hasher = hashlib.sha256()
-        with open(file_path, 'rb') as f:
-            buffer = f.read(BLOCK_SIZE)
-            while len(buffer) > 0:
-                hasher.update(buffer)
-                buffer = f.read(BLOCK_SIZE)
-        return hasher.hexdigest()
 
-    file_hash1 = calculate_file_hash(file1)
-    file_hash2 = calculate_file_hash(file2)
+    # اطمینان از اینکه فولدر مقصد وجود دارد
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
-    # اگر هش‌ها برابر باشند، یعنی فایل‌ها مشابه هستند
-    if file_hash1 == file_hash2:
-        return
+    # دریافت فایل‌ها از فولدر اول و دوم
+    files1 = os.listdir(folder1)
+    files2 = os.listdir(folder2)
 
-    # نمایش پنجره گرافیکی برای انتخاب فایل
-    show_prompt(file1, file1, file2, output_folder)
+    # بررسی فایل‌های تکراری
+    for file in files1:
+        if file in files2:
+            path1 = os.path.join(folder1, file)
+            path2 = os.path.join(folder2, file)
+
+            # بررسی مسیر نسبی از ریشه فولدرها
+            rel_path1 = os.path.relpath(path1, folder1)
+            rel_path2 = os.path.relpath(path2, folder2)
+
+            # اگر مسیر نسبی یکسان باشد (با توجه به اینکه در همان دایرکتوری هستند)، پردازش نشوند
+            if rel_path1 == rel_path2:
+                continue
+
+            # نمایش پنجره برای انتخاب فایل (که باید از کدام فولدر به پوشه مقصد منتقل شود)
+            show_prompt(file, path1, path2, output_folder)
+
+    # پیام پایان عملیات
+    show_end_message()

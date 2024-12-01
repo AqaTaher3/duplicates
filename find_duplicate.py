@@ -1,25 +1,50 @@
-# find_duplicate.py
 import os
-from coppy_missing import coppy_missing_files
+import hashlib
+from grafical import show_prompt, show_end_message
 
 
-def find_duplicates_in_folder(folder, output_folder):
-    """
-    پیدا کردن فایل‌های تکراری در یک فولدر و ارسال برای پردازش.
-    """
-    files = os.listdir(folder)  # گرفتن لیست فایل‌ها در فولدر
-    files_paths = [os.path.join(folder, file) for file in files]  # دریافت مسیر کامل هر فایل
+def calculate_file_hash(file_path):
+    """محاسبه هش SHA-256 یک فایل"""
+    BLOCK_SIZE = 65536  # اندازه بلوک 64 KB
+    hasher = hashlib.sha256()
+    with open(file_path, 'rb') as f:
+        buffer = f.read(BLOCK_SIZE)
+        while len(buffer) > 0:
+            hasher.update(buffer)
+            buffer = f.read(BLOCK_SIZE)
+    return hasher.hexdigest()
 
-    # بررسی هر فایل با سایر فایل‌ها
-    for i, file1 in enumerate(files_paths):
-        for file2 in files_paths[i+1:]:  # مقایسه هر فایل با فایل‌های بعدی
-            if os.path.basename(file1) == os.path.basename(file2):  # اگر نام فایل‌ها مشابه باشند
-                # فراخوانی تابع برای پردازش فایل‌های تکراری
-                coppy_missing_files(file1, file2, output_folder)
+
+def find_duplicate(folder, output_folder):
+    """پیدا کردن فایل‌های تکراری در یک فولدر و پردازش آنها"""
+
+    seen_files = {}  # دیکشنری برای نگهداری هش فایل‌ها
+    total_files = 0  # تعداد فایل‌ها
+
+    # جمع‌آوری فایل‌ها از پوشه مشخص‌شده
+    files = [os.path.join(root, file) for root, _, files in os.walk(folder) for file in files]
+    total_files = len(files)
+
+    for file_path in files:
+        file_hash = calculate_file_hash(file_path)  # محاسبه هش فایل
+
+        if file_hash in seen_files:
+            original_file = seen_files[file_hash]
+            duplicate_file = file_path
+
+            # نمایش پنجره گرافیکی برای انتخاب فایل
+            show_prompt(original_file, duplicate_file, output_folder)
+
+        else:
+            seen_files[file_hash] = file_path  # ذخیره مسیر فایل برای هش‌های جدید
+
+    # نمایش پیام پایان عملیات
+    show_end_message()
+
 
 if __name__ == "__main__":
-    folder = r"C:\Users\HP\Music\muzic"  # فولدر مورد نظر
-    output_folder = r"C:\Users\HP\Music\gadimi"  # پوشه مقصد برای فایل‌ها
+    folder = r"C:\Users\HP\Music\muzic"  # پوشه‌ای که فایل‌ها از آن بررسی می‌شود
+    output_folder = r"C:\Users\HP\Music\gadimi"  # پوشه مقصد برای انتقال فایل‌ها
 
-    # استفاده از تابع برای پیدا کردن فایل‌های تکراری و پردازش آنها
-    find_duplicates_in_folder(folder, output_folder)
+    # فراخوانی تابع برای پیدا کردن و پردازش فایل‌های تکراری
+    find_duplicate(folder, output_folder)
